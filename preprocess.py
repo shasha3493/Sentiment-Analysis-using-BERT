@@ -1,7 +1,20 @@
 import pandas as pd
 
 
-def preprocess(data_path = './data/smileannotationsfinal.csv'):
+def preprocess(data_path):
+    '''
+    Reads the csv file into a dataframe with tweet if as row indices and does the preprocessing.
+    Preprocessing includes:
+        - Removing ths samples that have multiple emotions and have category as 'nocode'
+        - Adding a new column 'label' to the dataframe which contains the id for the category 
+    
+    Parameters:
+    data_path: file path for csv file
+
+    Returns:
+    df: preprocessed dataframe
+    label_dict: emotions category to id dictionary
+    '''
 
     # Reading the data to a dataframe with column names as id, text and category
     df = pd.read_csv(data_path, names = ['id', 'text', 'category'])
@@ -19,8 +32,8 @@ def preprocess(data_path = './data/smileannotationsfinal.csv'):
 
     # Adding a new column 'label' to the dataframe which contains the id for the category
     df['label'] = df.category.replace(label_dict)
-    return df
+    return df, label_dict
 
 if (__name__ == '__main__'):
-    print(preprocess())
+    print(preprocess('./data/smileannotationsfinal.csv'))
 

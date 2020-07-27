@@ -2,9 +2,21 @@ from sklearn.model_selection import train_test_split
 from preprocess import preprocess
 
 
-def train_val_split(dataframe):
+def train_val_split(df):
+    '''
+    Takes in the dataframe and appends a column named 'data_type' whose value is either train/val 
+    corresponding to each sample. For every class, 85% of samples have 'data_type' values as 'train' and
+    15% as 'val'
 
-    df = dataframe
+    Parameters:
+    df: data frame retuned by preprocess() in preporocess.py
+
+    Returns:
+    df: data frame with 'data_type' column appended
+
+    '''
+
+
     class_counts = df.category.value_counts()
 
     # As we see that dataset is imbalanced i.e. number of samples for different class is not balanced,
@@ -23,7 +35,7 @@ def train_val_split(dataframe):
 
 if (__name__ == '__main__'):
     data_path = './data/smileannotationsfinal.csv'
-    df = preprocess(data_path)
+    df,_ = preprocess(data_path)
     print(train_val_split(df))
     # print(X_train)
     
