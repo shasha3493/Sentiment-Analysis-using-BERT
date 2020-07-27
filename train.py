@@ -1,9 +1,17 @@
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from transformers import BertForSequenceClassification
 from preprocess import preprocess
-from transformer import AdamW, get_linear_schedule_with_warmup
+from transformers import AdamW, get_linear_schedule_with_warmup
+from train_test_split import train_val_split
+from tokenizer import tokenize
 
-_, label_dict = preprocess()
+
+data_path = './data/smileannotationsfinal.csv'
+
+df, label_dict = preprocess(data_path)
+df = train_val_split(df)
+dataset_train, dataset_val = tokenize(df)
+
 
 # Reason we use base model is because the architecture is small and hence it's computationally tractable
 # BertForSequneceClassification: Bert transformer with a sequnce classification head on the top
@@ -27,4 +35,4 @@ epochs = 10
 # Create a schedule with a learning rate that decreases linearly from the initial lr set 
 # in the optimizer to 0, after a warmup period during which it increases linearly from 0 to 
 # the initial lr set in the optimizer.
-scheduler = get_linear_schedule_with_warmup(optimizer, num_warmpup_steps = 0, num_training_steps = len(dataloader_train)*epochs)
+scheduler = get_linear_schedule_with_warmup(optimizer, num_training_steps = len(dataloader_train)*epochs, num_warmup_steps = 0)
