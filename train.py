@@ -77,7 +77,7 @@ def evaluate(dataloader_val):
     loss_val_total = 0
     predictions, true_vals = [], []
     
-    for batch in dataloader_val:
+    for batch in tqdm(dataloader_val):
         
         batch = tuple(b.to(device) for b in batch)
         
@@ -146,4 +146,15 @@ for epoch in tqdm(range(1, epochs+1)):
     tqdm.write('Validation Loss: {}'.format(val_loss))
     tqdm.write('F1 score(weighted): {}'.format(val_f1))
 
+# Evaluation
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', 
+                                    num_labels = len(label_dict), # number of output labels
+                                    output_attentions = False, # we dont't want model to output attentions
+                                    output_hidden_states = False) # # we dont't want model to output final hidden states
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model.to(device)
+model.load_state_dict(torch.load('./Models/BERT_ft_epoch{}.model'.format(epoch), map_location = torch.device(device)))
 
+_, predictions, true_vals = evaluate(dataloader_val)
+
+accuracy_per_class(predictions, true_vals)
