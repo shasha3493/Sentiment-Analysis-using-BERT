@@ -37,5 +37,5 @@ if (__name__ == '__main__'):
     data_path = './data/smileannotationsfinal.csv'
     df,_ = preprocess(data_path)
     print(train_val_split(df))
-    # print(X_train)
+    
     
