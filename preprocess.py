@@ -3,9 +3,9 @@ import pandas as pd
 
 def preprocess(data_path):
     '''
-    Reads the csv file into a dataframe with tweet if as row indices and does the preprocessing.
+    Reads the csv file into a dataframe with tweet id as row indices and does the preprocessing.
     Preprocessing includes:
-        - Removing ths samples that have multiple emotions and have category as 'nocode'
+        - Removing the samples that have multiple emotions or have category as 'nocode'
         - Adding a new column 'label' to the dataframe which contains the id for the category 
     
     Parameters:
