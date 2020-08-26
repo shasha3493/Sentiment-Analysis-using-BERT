@@ -111,6 +111,7 @@ for epoch in tqdm(range(1, epochs+1)):
     model.train()
     loss_train_total = 0
 
+    # https://github.com/tqdm/tqdm#parameters
     progress_bar = tqdm(dataloader_train, desc = 'Epoch {}'.format(epoch), leave = False, disable = False)
 
     for batch in progress_bar:
@@ -120,9 +121,9 @@ for epoch in tqdm(range(1, epochs+1)):
         inputs = {'input_ids': batch[0],
                   'attention_mask': batch[1],
                   'labels': batch[2]}
-
-        outputs = model(**inputs)
-
+                  
+        # Inputs to the model: https://huggingface.co/transformers/model_doc/bert.html#bertforsequenceclassification
+        outputs = model(**inputs) # Returns a tuple of loss and the logits        
         loss = outputs[0]
         loss_train_total += loss.item()
         loss.backward()
