@@ -13,19 +13,23 @@ from tqdm import tqdm
 
 data_path = './data/smileannotationsfinal.csv'
 
+# Preprocess the data
 df, label_dict = preprocess(data_path)
+# Train - Validation split
 df = train_val_split(df)
+# Creating dataset objects
 dataset_train, dataset_val = tokenize(df)
 
 
 # Reason we use base model is because the architecture is small and hence it's computationally tractable
 # BertForSequneceClassification: Bert transformer with a sequnce classification head on the top
 model = BertForSequenceClassification.from_pretrained('bert-base-uncased', 
-                                    num_labels = len(label_dict), # number of output labels
+                                    num_labels = len(label_dict), # number of output labels. This controls the number of nodes in the output layer
                                     output_attentions = False, # we dont't want model to output attentions
                                     output_hidden_states = False) # # we dont't want model to output final hidden states
+                                    # Else the output will be a tuple of dim 3 where 3rd dim will be the final hidden states
 
-batch_size = 2 #32
+batch_size = 2 
 
 # Creating training and validation dataloaders
 dataloader_train = DataLoader(dataset_train, sampler = RandomSampler(dataset_train), batch_size = batch_size)
@@ -33,6 +37,7 @@ dataloader_val = DataLoader(dataset_val, sampler = RandomSampler(dataset_val), b
 
 # Initializing the optimizer
 # https://huggingface.co/transformers/main_classes/optimizer_schedules.html
+# lr is small as fine tuning
 optimizer = AdamW(model.parameters(), lr = 1e-5, eps = 1e-8)
 
 epochs = 10 
@@ -44,13 +49,50 @@ scheduler = get_linear_schedule_with_warmup(optimizer, num_training_steps = len(
 
 # Defining performance metrics
 def f1_score_func(preds, labels):
+    '''
+    Calculates the weighted F1-score
+
+    Parameters:
+    preds: np array containing the logit scores (batch_size*len(dataloader), 6)
+    labels: np array containing the true labels (batch_size*len(dataloader),) 
+
+    Returns:
+    Weighted F1 - score
+    '''
+    # Pred labels
     preds_flat = np.argmax(preds, axis = 1).flatten()
+
+    # True Labels
     labels_flat = labels.flatten()
+
+    # This parameter is required for multiclass/multilabel targets. 
+    # If None, the scores for each class are returned. Otherwise, 
+    # this determines the type of averaging performed on the data
+
+    # 'weighted':
+    # Calculate metrics for each label, and find their average weighted by 
+    # support (the number of true instances for each label). This alters 
+    # ‘macro’ to account for label imbalance; it can result in an F-score that 
+    # is not between precision and recall.
     return f1_score(labels_flat, preds_flat, average = 'weighted')
 
-def accuracy_per_class(pred, labels):
+def accuracy_per_class(preds, labels):
+    '''
+    Prints Accuracy per class
+
+    Parameters:
+    preds: np array containing the logit scores (batch_size*len(dataloader), 6)
+    labels: np array containing the true labels (batch_size*len(dataloader),) 
+
+    Returns:
+    None
+    '''
+
+    # id2label dictionary 
     label_dict_inverse = {v:k for k,v in label_dict.items()}
+    # Predicted labels
     preds_flat = np.argmax(preds, axis = 1).flatten()
+    # True labels
     labels_flat = labels.flatten()
 
     for label in np.unique(labels_flat):
@@ -61,6 +103,7 @@ def accuracy_per_class(pred, labels):
         print('#####################')
 
 
+# Setting the seed
 seed_val = 17
 random.seed(seed_val)
 np.random.seed(seed_val)
@@ -71,6 +114,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
 
 def evaluate(dataloader_val):
+    '''
+    Validation Loop
+    '''
 
     model.eval()
     
@@ -105,7 +151,8 @@ def evaluate(dataloader_val):
             
     return loss_val_avg, predictions, true_vals
 
-
+# Training
+best_f1 = 0
 for epoch in tqdm(range(1, epochs+1)):
 
     model.train()
@@ -133,7 +180,6 @@ for epoch in tqdm(range(1, epochs+1)):
         scheduler.step()
         progress_bar.set_postfix({'training_loss': '{}'.format(loss.item()/len(batch))})
 
-    torch.save(model.state_dict(),'./Models/BERT_ft_epoch{}.model'.format(epoch))
 
     tqdm.write('\nEpoch {}'.format(epoch))
 
@@ -147,14 +193,23 @@ for epoch in tqdm(range(1, epochs+1)):
     tqdm.write('Validation Loss: {}'.format(val_loss))
     tqdm.write('F1 score(weighted): {}'.format(val_f1))
 
+    if val_f1 > best_f1:
+        best_f1 = val_f1
+        print('Saving the model...')
+        torch.save(model.state_dict(),'./Models/best_model.model')
+
 # Evaluation
+
+# Downloading the pre-trained model
 model = BertForSequenceClassification.from_pretrained('bert-base-uncased', 
                                     num_labels = len(label_dict), # number of output labels
                                     output_attentions = False, # we dont't want model to output attentions
                                     output_hidden_states = False) # # we dont't want model to output final hidden states
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model.to(device)
-model.load_state_dict(torch.load('./Models/BERT_ft_epoch{}.model'.format(epoch), map_location = torch.device(device)))
+
+# Loading the weights
+model.load_state_dict(torch.load('./Models/best_model.model', map_location = torch.device(device)))
 
 _, predictions, true_vals = evaluate(dataloader_val)
 
